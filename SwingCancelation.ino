@@ -1,56 +1,54 @@
+#include "Motor.h"
+#include "utils.h"
 
-#include "constants.h"
-#include "globalvar.h"
-
+Motor pitch_motor(Serial2, 1);
+Motor yaw_motor(Serial3, 0);
+bool sin_mode = false;
+double t=0;
 
 void setup() {
-  // put your setup code here, to run once:
-  startDebugSerial();
-  startDXLSerials();
-  nByte = 0;
-  
-  now = millis();
-  past = now;
+  DEBUG_SERIAL.begin(115200);
+  DEBUG_SERIAL.println("BEGIN");
+  yaw_motor.begin();
+  pitch_motor.begin();
 }
 
 void loop() {
-  
+  /*int yaw = yaw_motor.getPresentPosition();
+  int pitch = pitch_motor.getPresentPosition();
+  DEBUG_SERIAL.printf("yaw: %d", yaw);
+  DEBUG_SERIAL.printf(", pitch: %d\n", pitch);*/
+
   String command = "";
   while (DEBUG_SERIAL.available()) {
-    delay(3);  //delay to allow buffer to fill 
-    if (DEBUG_SERIAL.available() >0) {
-      char c = DEBUG_SERIAL.read();  //gets one byte from serial buffer
+    delay(3);
+    if (DEBUG_SERIAL.available() > 0) {
+      char c = DEBUG_SERIAL.read();
       command += c;
     }
   }
   command.remove(command.length()-1);
 
-
-  getPresentPos(YAW_MOTOR_ID);
-  int yaw_motor_pos = LE2int32(&readString[9]);
-  getPresentPos(PITCH_MOTOR_ID);
-  int pitch_motor_pos = LE2int32(&readString[9]);
-  DEBUG_SERIAL.print("yaw motor: ");
-  DEBUG_SERIAL.print(yaw_motor_pos);
-  DEBUG_SERIAL.print(", pitch motor: ");
-  DEBUG_SERIAL.println(pitch_motor_pos);
-  
   if (command == "on") {
-    toggleTorque(PITCH_MOTOR_ID);
+    DEBUG_SERIAL.println("sin mode");
     sin_mode = true;
-    t=0;
+    yaw_motor.setOperatingMode(POSITION_CONTROL);
+    yaw_motor.setTorqueOn();
+    yaw_motor.setLedOn();
   } else if (command == "off") {
-    setGoalPos(PITCH_MOTOR_ID, 1000);
-    delay(1000);
-    toggleTorque(PITCH_MOTOR_ID);
     sin_mode = false;
+    yaw_motor.setGoalPosition(1000);
+    delay(500);
+    yaw_motor.setTorqueOff();
+    yaw_motor.setLedOff();
+    t=0;
   }
 
   if (sin_mode) {
-    pos = 1000 + 500*sin(t);
-    setGoalPos(PITCH_MOTOR_ID, pos); 
-    t += 0.01;
+    uint16_t pos = 1000 + (uint16_t)(1000*sin(t/30.0));
+    yaw_motor.setGoalPosition(pos);
+    t++;
   }
-  past = now;
-  now = millis();
+    
+  delay(50);
 }
