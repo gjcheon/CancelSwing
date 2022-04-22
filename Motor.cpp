@@ -24,6 +24,7 @@ int32_t Motor::getPresentPosition() {
 }
 
 void Motor::setGoalPosition(uint16_t pos) {
+  //DEBUG_SERIAL.printf("goal position to %d\n", pos);
   Packet tPacket = makeWritePacket(id_, GoalPosition, pos);
   this->write(tPacket);
   free(tPacket.data);
@@ -33,7 +34,8 @@ void Motor::setGoalPosition(uint16_t pos) {
 }
 
 void Motor::setTorqueOn() {
-  Packet tPacket = makeWritePacket(id_, TorqueEnable, true);
+  DEBUG_SERIAL.println("Torque ON");
+  Packet tPacket = makeWritePacket(id_, TorqueEnable, 1);
   this->write(tPacket);
   free(tPacket.data);
   Packet rPacket = this->read();
@@ -42,7 +44,8 @@ void Motor::setTorqueOn() {
 }
 
 void Motor::setTorqueOff() {
-  Packet tPacket = makeWritePacket(id_, TorqueEnable, false);
+  DEBUG_SERIAL.println("Torque OFF");
+  Packet tPacket = makeWritePacket(id_, TorqueEnable, 0);
   this->write(tPacket);
   free(tPacket.data);
   Packet rPacket = this->read();
@@ -51,6 +54,7 @@ void Motor::setTorqueOff() {
 }
 
 void Motor::setLedOn() {
+  DEBUG_SERIAL.println("LED ON");
   Packet tPacket = makeWritePacket(id_, LED, 1);
   this->write(tPacket);
   free(tPacket.data);
@@ -60,6 +64,7 @@ void Motor::setLedOn() {
 }
 
 void Motor::setLedOff() {
+  DEBUG_SERIAL.println("LED OFF");
   Packet tPacket = makeWritePacket(id_, LED, 0);
   this->write(tPacket);
   free(tPacket.data);
@@ -80,7 +85,7 @@ void Motor::setOperatingMode(OPMode mode) {
 void Motor::write(Packet tPacket) {
   uint8_t transmitLen = port_.write(tPacket.data, tPacket.len);
   port_.flush();
-  if (transmitLen != tPacket.len) DEBUG_SERIAL.printf("id: %d device wrong transmission\n", id_);  
+  if (transmitLen != tPacket.len) { DEBUG_SERIAL.printf("id: %d device wrong transmission\n", id_); } 
 }
 
 Packet Motor::read() {
@@ -89,22 +94,20 @@ Packet Motor::read() {
   rPacket.data = (byte*) malloc(startLen * sizeof(byte));
   rPacket.len = startLen;
 
-  delayMicroseconds(200);
+  delayMicroseconds(250);
   uint16_t idx = 0;
   while(port_.available()){
     rPacket.data[idx] = port_.read();
     if (startLen-1 == idx) {
       rPacket.len += (rPacket.data[5] + ((uint16_t)rPacket.data[6] << 8));
       rPacket.data = (byte*) realloc(rPacket.data, rPacket.len * sizeof(byte));
+      delayMicroseconds(50);
     } 
-    if (startLen != rPacket.len && rPacket.len-1 < idx) {
-      DEBUG_SERIAL.printf("id: %d device received invalid length packet\n", id_);
-    }
+    if (startLen != rPacket.len && rPacket.len-1 == idx) { break; }
     idx++;
-    delayMicroseconds(10);
   }
-  if (rPacket.data[4] != id_) { DEBUG_SERIAL.println("received packet with wrong id"); }
-  if (!checkPacket(rPacket)) { DEBUG_SERIAL.printf("id: %d device received invalid packet\n", id_); }
+  if (rPacket.data[4] != id_) { DEBUG_SERIAL.println("received packet with wrong id"); printPacket(rPacket); }
+  if (!checkPacket(rPacket)) { DEBUG_SERIAL.printf("id: %d device received invalid packet\n", id_); printPacket(rPacket); }
     
   return rPacket; 
 }

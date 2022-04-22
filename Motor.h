@@ -19,6 +19,7 @@ class Motor {
 public:
   Motor(HardwareSerial& port, uint8_t id);
   void begin(unsigned long baud = 3000000);
+
   int32_t getPresentPosition();
   void setGoalPosition(uint16_t goal);
   void setTorqueOn();

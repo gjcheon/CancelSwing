@@ -1,24 +1,29 @@
 #include "Motor.h"
+#include "IMU.h"
 #include "utils.h"
 
 Motor pitch_motor(Serial2, 1);
 Motor yaw_motor(Serial3, 0);
+IMU imu;
 bool sin_mode = false;
 double t=0;
 
 void setup() {
   DEBUG_SERIAL.begin(115200);
-  DEBUG_SERIAL.println("BEGIN");
   yaw_motor.begin();
   pitch_motor.begin();
+  imu.init();
+  DEBUG_SERIAL.println("SETUP DONE");
 }
 
 void loop() {
-  /*int yaw = yaw_motor.getPresentPosition();
+  int yaw = yaw_motor.getPresentPosition();
   int pitch = pitch_motor.getPresentPosition();
-  DEBUG_SERIAL.printf("yaw: %d", yaw);
-  DEBUG_SERIAL.printf(", pitch: %d\n", pitch);*/
+  DEBUG_SERIAL.printf("yaw: %d, pitch: %d\n", yaw, pitch);
 
+  int16_t* acc = imu.getAcc();
+  DEBUG_SERIAL.printf("acc x: %d, y: %d, z: %d\n", acc[0], acc[1], acc[2]); 
+  
   String command = "";
   while (DEBUG_SERIAL.available()) {
     delay(3);
@@ -45,10 +50,10 @@ void loop() {
   }
 
   if (sin_mode) {
-    uint16_t pos = 1000 + (uint16_t)(1000*sin(t/30.0));
+    uint16_t pos = 1000 + (int)(1000*sin(t/30.0));
     yaw_motor.setGoalPosition(pos);
     t++;
   }
     
-  delay(50);
+  delay(250);
 }
